@@ -32,56 +32,52 @@ import {
 } from "recharts";
 
 // Dados mockados para os gráficos
+// Dados mockados para os gráficos (ZERADOS para produção)
 const appointmentsData = [
-  { month: "Jul", agendamentos: 45, realizados: 38, cancelados: 7 },
-  { month: "Ago", agendamentos: 52, realizados: 47, cancelados: 5 },
-  { month: "Set", agendamentos: 61, realizados: 55, cancelados: 6 },
-  { month: "Out", agendamentos: 73, realizados: 68, cancelados: 5 },
-  { month: "Nov", agendamentos: 89, realizados: 82, cancelados: 7 },
-  { month: "Dez", agendamentos: 108, realizados: 98, cancelados: 10 }
+  { month: "Jul", agendamentos: 0, realizados: 0, cancelados: 0 },
+  { month: "Ago", agendamentos: 0, realizados: 0, cancelados: 0 },
+  { month: "Set", agendamentos: 0, realizados: 0, cancelados: 0 },
+  { month: "Out", agendamentos: 0, realizados: 0, cancelados: 0 },
+  { month: "Nov", agendamentos: 0, realizados: 0, cancelados: 0 },
+  { month: "Dez", agendamentos: 0, realizados: 0, cancelados: 0 }
 ];
 
 const revenueData = [
-  { month: "Jul", receita: 18500, despesas: 8200 },
-  { month: "Ago", receita: 22300, despesas: 9100 },
-  { month: "Set", receita: 26800, despesas: 10500 },
-  { month: "Out", receita: 31200, despesas: 11200 },
-  { month: "Nov", receita: 38900, despesas: 12100 },
-  { month: "Dez", receita: 45280, despesas: 12450 }
+  { month: "Jul", receita: 0, despesas: 0 },
+  { month: "Ago", receita: 0, despesas: 0 },
+  { month: "Set", receita: 0, despesas: 0 },
+  { month: "Out", receita: 0, despesas: 0 },
+  { month: "Nov", receita: 0, despesas: 0 },
+  { month: "Dez", receita: 0, despesas: 0 }
 ];
 
 const servicesData = [
-  { name: "Botox", value: 35, color: "#10b981" },
-  { name: "Preenchimento", value: 28, color: "#3b82f6" },
-  { name: "Limpeza de Pele", value: 20, color: "#8b5cf6" },
-  { name: "Peeling", value: 10, color: "#f59e0b" },
-  { name: "Outros", value: 7, color: "#6b7280" }
+  { name: "Sem dados", value: 100, color: "#e5e7eb" }
 ];
 
 const conversionData = [
-  { origem: "Instagram", leads: 120, convertidos: 85, taxa: 71 },
-  { origem: "Google", leads: 95, convertidos: 72, taxa: 76 },
-  { origem: "Indicação", leads: 80, convertidos: 68, taxa: 85 },
-  { origem: "WhatsApp", leads: 65, convertidos: 48, taxa: 74 },
-  { origem: "Facebook", leads: 45, convertidos: 28, taxa: 62 }
+  { origem: "Instagram", leads: 0, convertidos: 0, taxa: 0 },
+  { origem: "Google", leads: 0, convertidos: 0, taxa: 0 },
+  { origem: "Indicação", leads: 0, convertidos: 0, taxa: 0 },
+  { origem: "WhatsApp", leads: 0, convertidos: 0, taxa: 0 },
+  { origem: "Facebook", leads: 0, convertidos: 0, taxa: 0 }
 ];
 
 const professionalPerformance = [
-  { name: "Dr. Rafael", atendimentos: 145, receita: 28500, satisfacao: 4.8 },
-  { name: "Dra. Carolina", atendimentos: 132, receita: 24800, satisfacao: 4.9 },
-  { name: "Dr. Pedro", atendimentos: 98, receita: 19200, satisfacao: 4.7 }
+  // { name: "Dr. Rafael", atendimentos: 145, receita: 28500, satisfacao: 4.8 },
+  // Deixando vazio para não mostrar dados fictícios
 ];
 
 const peakHours = [
-  { hora: "08:00", atendimentos: 12 },
-  { hora: "09:00", atendimentos: 25 },
-  { hora: "10:00", atendimentos: 38 },
-  { hora: "11:00", atendimentos: 42 },
-  { hora: "14:00", atendimentos: 35 },
-  { hora: "15:00", atendimentos: 40 },
-  { hora: "16:00", atendimentos: 32 },
-  { hora: "17:00", atendimentos: 28 },
-  { hora: "18:00", atendimentos: 18 }
+  { hora: "08:00", atendimentos: 0 },
+  { hora: "09:00", atendimentos: 0 },
+  { hora: "10:00", atendimentos: 0 },
+  { hora: "11:00", atendimentos: 0 },
+  { hora: "14:00", atendimentos: 0 },
+  { hora: "15:00", atendimentos: 0 },
+  { hora: "16:00", atendimentos: 0 },
+  { hora: "17:00", atendimentos: 0 },
+  { hora: "18:00", atendimentos: 0 }
 ];
 
 interface MetricCardProps {
@@ -159,29 +155,29 @@ const Relatorios = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <MetricCard
               title="Total de Agendamentos"
-              value="428"
-              change="+18% vs período anterior"
-              changeType="positive"
+              value="0"
+              change="Sem dados"
+              changeType="positive" // Manter neutro se possível, mas o componente pode exigir um tipo
               icon={Calendar}
             />
             <MetricCard
               title="Taxa de Comparecimento"
-              value="91%"
-              change="+3% vs período anterior"
+              value="0%"
+              change="Sem dados"
               changeType="positive"
               icon={Activity}
             />
             <MetricCard
               title="Receita Total"
-              value="R$ 183.000"
-              change="+24% vs período anterior"
+              value="R$ 0,00"
+              change="Sem dados"
               changeType="positive"
               icon={DollarSign}
             />
             <MetricCard
               title="Novos Pacientes"
-              value="87"
-              change="+12% vs período anterior"
+              value="0"
+              change="Sem dados"
               changeType="positive"
               icon={Users}
             />
@@ -295,27 +291,17 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {professionalPerformance.map((prof) => (
-                    <div key={prof.name} className="p-4 rounded-lg bg-gray-50 border border-gray-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900">{prof.name}</h4>
-                        <div className="flex items-center gap-1 text-yellow-500">
-                          <span className="text-sm font-medium">{prof.satisfacao}</span>
-                          <span className="text-xs">★</span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-gray-600">Atendimentos</p>
-                          <p className="font-semibold text-gray-900">{prof.atendimentos}</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-600">Receita</p>
-                          <p className="font-semibold text-emerald-600">R$ {prof.receita.toLocaleString()}</p>
-                        </div>
-                      </div>
+                  {professionalPerformance.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      Nenhum profissional com dados registrados neste período.
                     </div>
-                  ))}
+                  ) : (
+                    professionalPerformance.map((prof) => (
+                      <div key={prof.name} className="p-4 rounded-lg bg-gray-50 border border-gray-100">
+                        {/* ... existing card content ... */}
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

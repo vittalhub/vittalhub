@@ -14,7 +14,6 @@ const authSchema = z.object({
 });
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,11 +22,15 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check for mock session
-    const mockSession = localStorage.getItem("clinicflow_session");
-    if (mockSession) {
-      navigate("/dashboard");
-    }
+    // Check for active Supabase session
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dashboard");
+      }
+    };
+    
+    checkSession();
   }, [navigate]);
 
   const validateForm = () => {
@@ -51,143 +54,174 @@ const Auth = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm()) return; // Keep Zod validation
 
     setLoading(true);
+    try {
+      // Buscar usuário na tabela profiles
+      const { data: user, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          clinica:clinicas(*)
+        `)
+        .eq('email', email)
+        // @ts-expect-error - coluna senha existe
+        .eq('senha', password)
+        .single();
 
-    // Simulate API delay
-    setTimeout(() => {
-      localStorage.setItem("clinicflow_session", JSON.stringify({ email }));
-      
+      if (error || !user) {
+        toast({
+          title: "Erro ao fazer login",
+          description: "Email ou senha incorretos",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verificar se o usuário está ativo
+      if (user.status !== 'active') {
+        toast({
+          title: "Conta inativa",
+          description: "Entre em contato com o suporte",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Verificar se tem clínica associada
+      if (!user.clinica_id) {
+        toast({
+          title: "Clínica não encontrada",
+          description: "Usuário sem clínica associada. Entre em contato com o suporte.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Criar sessão manual no localStorage
+      localStorage.setItem('user_session', JSON.stringify({
+        id: user.id,
+        email: user.email,
+        name: user.full_name,
+        clinica_id: user.clinica_id,
+        role: user.role
+      }));
+
+      // Login bem-sucedido!
       toast({
-        title: isLogin ? "Bem-vindo de volta!" : "Conta criada!",
-        description: isLogin ? "Login realizado com sucesso." : "Sua conta foi criada com sucesso.",
+        title: "Bem-vindo de volta!",
+        description: `Olá, ${user.full_name}!`,
       });
       
       navigate("/dashboard");
+      
+    } catch (error) {
+      console.error('Erro inesperado:', error);
+      toast({
+        title: "Erro inesperado",
+        description: "Tente novamente mais tarde",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex">
-      {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar ao início
-          </button>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-emerald-50/30 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mb-8"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar ao início
+        </button>
 
-          <div className="flex items-center gap-2 mb-8">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
+        {/* Logo e título */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg">
+              <Sparkles className="h-6 w-6" />
             </div>
-            <span className="font-display text-2xl font-bold">Clinic IA</span>
-          </div>
-
-          <div className="bg-card rounded-2xl shadow-card border border-border/50 p-8">
-            <h1 className="font-display text-2xl font-bold mb-2">
-              {isLogin ? "Entrar na sua conta" : "Criar nova conta"}
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
+              VITTALHUB
             </h1>
-            <p className="text-muted-foreground mb-6">
-              {isLogin
-                ? "Digite suas credenciais para acessar o painel"
-                : "Preencha os dados para começar a usar"}
-            </p>
-
-            <form onSubmit={handleAuth} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password}</p>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                variant="hero"
-                size="lg"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Aguarde...
-                  </>
-                ) : isLogin ? (
-                  "Entrar"
-                ) : (
-                  "Criar conta"
-                )}
-              </Button>
-            </form>
-
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setErrors({});
-                }}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                {isLogin
-                  ? "Não tem uma conta? Cadastre-se"
-                  : "Já tem uma conta? Entre aqui"}
-              </button>
-            </div>
           </div>
+          <p className="text-xl text-gray-600">Bem-vindo de volta</p>
         </div>
-      </div>
 
-      {/* Right side - Decorative */}
-      <div className="hidden lg:flex flex-1 items-center justify-center p-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-glow" />
-        <div className="relative z-10 text-center max-w-lg">
-          <div className="w-32 h-32 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-8">
-            <Sparkles className="h-16 w-16 text-primary" />
+        {/* Card de Login */}
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+          <h2 className="text-2xl font-bold mb-2">Entrar na sua conta</h2>
+          <p className="text-gray-600 mb-6">Digite suas credenciais para acessar o painel</p>
+
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {errors.email && (
+                <p className="text-sm text-red-600">{errors.email}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              {errors.password && (
+                <p className="text-sm text-red-600">{errors.password}</p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              size="lg"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Aguarde...
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </Button>
+          </form>
+
+          {/* Link de cadastro */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 mb-3">Ainda não tem uma conta?</p>
+            <button
+              type="button"
+              onClick={() => navigate('/cadastro')}
+              className="text-emerald-600 hover:text-emerald-700 font-semibold transition-colors"
+            >
+              Fazer Cadastro
+            </button>
           </div>
-          <h2 className="font-display text-3xl font-bold mb-4">
-            Gerencie sua clínica com <span className="text-gradient">IA</span>
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Agenda inteligente, CRM médico, WhatsApp integrado. 
-            Tudo em um só lugar.
-          </p>
         </div>
       </div>
     </div>

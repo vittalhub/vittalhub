@@ -16,6 +16,7 @@ import {
   Target,
   Stethoscope, // Added Stethoscope
   DollarSign, // Added DollarSign
+  Briefcase, // Added Briefcase for Especialidades
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,7 @@ const menuItems = [
   { icon: Users, label: "CRM", href: "/crm" },
   { icon: Calendar, label: "Agenda", href: "/agenda" },
   { icon: Stethoscope, label: "Profissionais", href: "/profissionais" },
+  { icon: Briefcase, label: "Especialidades", href: "/especialidades" },
   { icon: DollarSign, label: "Financeiro", href: "/financeiro" },
   { icon: BarChart3, label: "Relatórios", href: "/dashboard/relatorios" },
   { icon: Settings, label: "Configurações", href: "/dashboard/configuracoes" },

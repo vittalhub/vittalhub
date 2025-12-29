@@ -13,6 +13,9 @@ import Pacientes from "./pages/Pacientes";
 import Anotacoes from "./pages/Anotacoes";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
+import Especialidades from "./pages/Especialidades";
+import CadastroClinica from "./pages/CadastroClinica";
+import ConfigurarClinica from "./pages/ConfigurarClinica";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +37,9 @@ const App = () => (
           <Route path="/anotacoes" element={<Anotacoes />} />
           <Route path="/agenda" element={<Agenda />} />
           <Route path="/dashboard/relatorios" element={<Relatorios />} />
+          <Route path="/especialidades" element={<Especialidades />} />
+          <Route path="/cadastro" element={<CadastroClinica />} />
+          <Route path="/configurar-clinica" element={<ConfigurarClinica />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

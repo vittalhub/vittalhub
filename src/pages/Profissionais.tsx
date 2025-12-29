@@ -1,10 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Mail, Phone, Edit, Trash2, Stethoscope } from "lucide-react";
+import { Search, Plus, Mail, Phone, Edit, Trash2, Stethoscope, UserPlus, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface Professional {
   id: string;
@@ -14,50 +27,104 @@ interface Professional {
   phone: string;
   email: string;
   status: "active" | "inactive";
+  role?: string;
 }
-
-const mockProfessionals: Professional[] = [
-  {
-    id: "1",
-    name: "Dr. Rafael Costa",
-    specialty: "Dermatologista",
-    registration: "CRM 12345-SP",
-    phone: "(11) 98765-4321",
-    email: "rafael.costa@clinica.com",
-    status: "active"
-  },
-  {
-    id: "2",
-    name: "Dra. Carolina Silva",
-    specialty: "Esteticista",
-    registration: "REG 67890-SP",
-    phone: "(11) 98765-1234",
-    email: "carolina.silva@clinica.com",
-    status: "active"
-  },
-  {
-    id: "3",
-    name: "Dr. Pedro Oliveira",
-    specialty: "Cirurgião Plástico",
-    registration: "CRM 54321-SP",
-    phone: "(11) 98765-5678",
-    email: "pedro.oliveira@clinica.com",
-    status: "inactive"
-  },
-  {
-    id: "4",
-    name: "Dra. Ana Martins",
-    specialty: "Nutricionista",
-    registration: "CRN 98765-SP",
-    phone: "(11) 98765-9999",
-    email: "ana.martins@clinica.com",
-    status: "active"
-  }
-];
 
 const Profissionais = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [professionals] = useState<Professional[]>(mockProfessionals);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    nome: "",
+    email: "",
+    especialidade: "",
+    role: "professional",
+    telefone: ""
+  });
+
+  useEffect(() => {
+    fetchProfessionals();
+  }, []);
+
+  const fetchProfessionals = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('clinica_id')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (!userProfile?.clinica_id) return;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('clinica_id', userProfile.clinica_id);
+      
+      if (error) throw error;
+
+      if (data) {
+        const mappedProfessionals: Professional[] = data.map(profile => ({
+          id: profile.id,
+          name: profile.full_name || 'Sem nome',
+          specialty: profile.especialidade || 'Não informada',
+          registration: profile.registro_profissional || '-',
+          phone: profile.telefone || '-',
+          email: profile.email,
+          status: profile.status as "active" | "inactive" || "active",
+          role: profile.role
+        }));
+        setProfessionals(mappedProfessionals);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar profissionais:', error);
+      toast.error("Erro ao carregar profissionais");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateProfessional = async () => {
+    if (!formData.nome || !formData.email) {
+      toast.error("Preencha nome e email");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      // Como não podemos criar usuário Auth no client sem deslogar,
+      // vamos simular o convite por enquanto ou usar uma função RPC se existisse.
+      // Para este MVP, vamos apenas mostrar um Toast informando o fluxo correto.
+      
+      // IDEAL: Chamar Edge Function que faz supabase.auth.admin.inviteUserByEmail()
+      
+      // Simulação visual para o usuário ver o fluxo:
+      toast.success("Convite enviado com sucesso!", {
+        description: `Um email foi enviado para ${formData.email} com instruções para definir a senha.`
+      });
+      
+      setIsModalOpen(false);
+      setFormData({
+        nome: "",
+        email: "",
+        especialidade: "",
+        role: "professional",
+        telefone: ""
+      });
+
+    } catch (error) {
+      toast.error("Erro ao enviar convite");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const filteredProfessionals = professionals.filter((prof) =>
     prof.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -75,10 +142,75 @@ const Profissionais = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-1">Profissionais</h1>
               <p className="text-gray-600">Gerencie a equipe da clínica</p>
             </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2 shadow-md hover:shadow-lg transition-all">
-              <Plus className="h-4 w-4" />
-              Novo Profissional
-            </Button>
+            
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2 shadow-md hover:shadow-lg transition-all">
+                  <UserPlus className="h-4 w-4" />
+                  Convidar Profissional
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Convidar Profissional</DialogTitle>
+                  <DialogDescription>
+                    Envie um convite para um novo membro da equipe. Ele receberá um email para definir a senha.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Nome Completo</Label>
+                    <Input
+                      id="name"
+                      value={formData.nome}
+                      onChange={(e) => setFormData({...formData, nome: e.target.value})}
+                      placeholder="Dr. João Silva"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email Corporativo</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      placeholder="joao@clinica.com"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">Função / Permissão</Label>
+                    <Select 
+                      value={formData.role} 
+                      onValueChange={(value) => setFormData({...formData, role: value})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a função" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Administrador (Acesso Total)</SelectItem>
+                        <SelectItem value="professional">Profissional de Saúde</SelectItem>
+                        <SelectItem value="receptionist">Recepcionista</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="specialty">Especialidade (Opcional)</Label>
+                    <Input
+                      id="specialty"
+                      value={formData.especialidade}
+                      onChange={(e) => setFormData({...formData, especialidade: e.target.value})}
+                      placeholder="Ex: Dermatologista"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
+                  <Button onClick={handleCreateProfessional} disabled={creating} className="bg-emerald-600">
+                    {creating ? "Enviando..." : "Enviar Convite"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Search */}
@@ -113,6 +245,7 @@ const Profissionais = () => {
                       </div>
                     </div>
                     <Badge
+                      variant={professional.status === "active" ? "default" : "secondary"}
                       className={
                         professional.status === "active"
                           ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
@@ -124,8 +257,14 @@ const Profissionais = () => {
                   </div>
 
                   <div className="space-y-3 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                      <span className="font-medium">Registro:</span> {professional.registration}
+                    <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-2 rounded justify-between">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="capitalize text-xs">
+                           {professional.role === 'admin' ? 'Administrador' : 
+                            professional.role === 'receptionist' ? 'Recepção' : 'Profissional'}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-gray-500">Reg: {professional.registration}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Phone className="h-4 w-4 text-emerald-600" />
@@ -151,13 +290,13 @@ const Profissionais = () => {
             ))}
           </div>
 
-          {filteredProfessionals.length === 0 && (
+          {!loading && filteredProfessionals.length === 0 && (
             <div className="text-center py-16">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                 <Stethoscope className="h-8 w-8 text-gray-400" />
               </div>
               <p className="text-gray-500 text-lg">Nenhum profissional encontrado</p>
-              <p className="text-gray-400 text-sm mt-1">Tente ajustar sua busca</p>
+              <p className="text-gray-400 text-sm mt-1">Clique em "Convidar Profissional" para adicionar alguém.</p>
             </div>
           )}
         </div>

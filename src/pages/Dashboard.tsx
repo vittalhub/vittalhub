@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { TodaySchedule } from "@/components/dashboard/TodaySchedule";
@@ -17,6 +20,44 @@ const appointmentGrowthData = [
 ];
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const [userName, setUserName] = useState("Usuário");
+  const [clinicName, setClinicName] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuthAndFetchData = async () => {
+      const sessionStr = localStorage.getItem("user_session");
+      if (!sessionStr) {
+        navigate("/auth");
+        return;
+      }
+
+      try {
+        const session = JSON.parse(sessionStr);
+        setUserName(session.name || "Usuário");
+
+        if (session.clinica_id) {
+          const { data: clinica, error } = await supabase
+            .from('clinicas')
+            .select('nome_clinica')
+            .eq('id', session.clinica_id)
+            .single();
+          
+          if (!error && clinica) {
+            setClinicName(clinica.nome_clinica);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthAndFetchData();
+  }, [navigate]);
+
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-emerald-50/30 dashboard-theme">
       <Sidebar />
@@ -25,30 +66,39 @@ const Dashboard = () => {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
-            <p className="text-gray-600">Bem-vindo de volta ao VITTALHUB</p>
+            <div className="flex flex-col">
+              <p className="text-xl text-emerald-700 font-semibold">
+                Bem-vindo de volta, {userName}!
+              </p>
+              {clinicName && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Gerenciando: <span className="font-medium text-gray-700">{clinicName}</span>
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <MetricCard
               title="Total de Pacientes"
-              value="248"
-              change="+12% vs mês anterior"
-              changeType="positive"
+              value="0" // Placeholder data - Table doesnt exist yet
+              change="Em breve"
+              changeType="neutral"
               icon={Users}
               iconColor="text-emerald-600"
             />
             <MetricCard
               title="Consultas Hoje"
-              value="8"
+              value="0" // Placeholder data - Table doesnt exist yet
               icon={Calendar}
               iconColor="text-blue-600"
             />
             <MetricCard
               title="Taxa de Conversão"
-              value="78%"
-              change="+5% vs mês anterior"
-              changeType="positive"
+              value="0%"
+              change="Em breve"
+              changeType="neutral"
               icon={TrendingUp}
               iconColor="text-purple-600"
             />
@@ -62,7 +112,7 @@ const Dashboard = () => {
                   <Activity className="h-5 w-5 text-emerald-600" />
                   Crescimento de Agendamentos
                 </CardTitle>
-                <p className="text-sm text-gray-600">Últimos 6 meses</p>
+                <p className="text-sm text-gray-600">Dados de exemplo (Módulo em desenvolvimento)</p>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
