@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { X, Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
@@ -16,6 +18,7 @@ interface PatientModalProps {
 
 export function PatientModal({ patient, isOpen, onClose, onSave }: PatientModalProps) {
   const [formData, setFormData] = useState<Partial<Patient>>({});
+  const [tagInput, setTagInput] = useState("");
 
   useEffect(() => {
     if (patient) {
@@ -24,6 +27,27 @@ export function PatientModal({ patient, isOpen, onClose, onSave }: PatientModalP
         setFormData({});
     }
   }, [patient]);
+
+  const handleAddTag = () => {
+      if (!tagInput.trim()) return;
+      const currentTags = formData.tags || [];
+      if (!currentTags.includes(tagInput.trim())) {
+          setFormData({ ...formData, tags: [...currentTags, tagInput.trim()] });
+      }
+      setTagInput("");
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+      const currentTags = formData.tags || [];
+      setFormData({ ...formData, tags: currentTags.filter(t => t !== tagToRemove) });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+          e.preventDefault();
+          handleAddTag();
+      }
+  };
 
   const handleSave = () => {
     if (formData && patient) {
@@ -48,6 +72,17 @@ export function PatientModal({ patient, isOpen, onClose, onSave }: PatientModalP
               id="name"
               value={formData.name || ""}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="col-span-3"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="phone" className="text-right">
+              Telefone
+            </Label>
+            <Input
+              id="phone"
+              value={formData.phone || ""}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className="col-span-3"
             />
           </div>
@@ -100,6 +135,40 @@ export function PatientModal({ patient, isOpen, onClose, onSave }: PatientModalP
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="col-span-3"
             />
+          </div>
+          
+          {/* Tags Section */}
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right mt-2">Tags</Label>
+            <div className="col-span-3 space-y-3">
+                <div className="flex gap-2">
+                    <Input 
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Adicionar tag..."
+                        className="flex-1"
+                    />
+                    <Button type="button" size="icon" variant="outline" onClick={handleAddTag}>
+                        <Plus className="h-4 w-4" />
+                    </Button>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                    {formData.tags?.map((tag, idx) => (
+                        <Badge key={idx} variant="secondary" className="gap-1 pr-1 bg-gray-100 text-gray-700 hover:bg-gray-200">
+                            {tag}
+                            <div 
+                                role="button" 
+                                onClick={() => handleRemoveTag(tag)}
+                                className="hover:bg-gray-300 rounded-full p-0.5 cursor-pointer"
+                            >
+                                <X className="h-3 w-3" />
+                            </div>
+                        </Badge>
+                    ))}
+                </div>
+            </div>
           </div>
         </div>
         <DialogFooter>

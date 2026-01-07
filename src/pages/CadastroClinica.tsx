@@ -62,45 +62,106 @@ const CadastroClinica = () => {
 
       console.log("Clínica criada:", clinica.id);
 
-      // 2. Criar Profile do Admin (sem Auth, direto na tabela)
-      console.log("2. Criando Profile do Admin...");
+      // 2. Criar Usuário no Supabase Auth
+      console.log("2. Criando Usuário Auth...");
       
-      // Gerar um UUID manualmente (simples, mas funcional)
-      const userId = crypto.randomUUID();
-      
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: userId,
-          clinica_id: clinica.id,
-          email: formData.email,
-          full_name: formData.nome,
-          telefone: formData.telefone,
-          // @ts-expect-error - coluna senha existe mas não está no tipo
-          senha: formData.senha,
-          role: 'admin',
-          status: 'active'
-        });
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.senha,
+        options: {
+          data: {
+            full_name: formData.nome,
+          }
+        }
+      });
 
-      if (profileError) {
-        console.error("Erro ao criar profile:", profileError);
-        throw new Error("Erro ao criar usuário: " + profileError.message);
+      if (authError) {
+        throw new Error("Erro ao criar usuário: " + authError.message);
       }
 
-      console.log("Profile criado com sucesso!");
+      if (!authData.user) {
+        throw new Error("Erro ao criar usuário: retorno vazio");
+      }
+
+      // 3. Criar/Atualizar Profile
+      // Usar INSERT ao invés de UPSERT para evitar acionar política de UPDATE
+      console.log("3. Criando Profile...");
+
+      // Primeiro, verificar se o profile já existe (criado pelo trigger)
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (existingProfile) {
+        // Profile já existe (criado pelo trigger), fazer UPDATE
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({
+            clinica_id: clinica.id,
+            telefone: formData.telefone,
+            role: 'admin',
+            status: 'active'
+          })
+          .eq('id', authData.user.id);
+
+        if (profileError) {
+          console.error("Erro ao atualizar perfil:", profileError);
+          toast.error("Conta criada, mas houve um erro ao configurar o perfil. Contate o suporte.");
+        } else {
+          console.log("Profile atualizado com sucesso!");
+        }
+      } else {
+        // Profile não existe, criar manualmente
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authData.user.id,
+            clinica_id: clinica.id,
+            email: formData.email,
+            full_name: formData.nome,
+            telefone: formData.telefone,
+            role: 'admin',
+            status: 'active'
+          });
+
+        if (profileError) {
+          console.error("Erro ao criar perfil:", profileError);
+          toast.error("Conta criada, mas houve um erro ao configurar o perfil. Contate o suporte.");
+        } else {
+          console.log("Profile criado com sucesso!");
+        }
+      }
 
       // Gerar token seguro (usando o ID da clínica como token)
       const token = clinica.id;
 
-      // Sucesso!
-      toast.success("Conta criada com sucesso!", {
-        description: "Agora configure sua clínica."
-      });
-
-      // Redirecionar para configuração da clínica COM TOKEN na URL
-      setTimeout(() => {
-        navigate(`/configurar-clinica?token=${token}`);
-      }, 1500);
+      // Verificar se o email precisa ser confirmado
+      if (authData.session) {
+        // Email confirmation desabilitada - usuário já está logado
+        toast.success("Conta criada com sucesso!", {
+          description: "Agora configure sua clínica."
+        });
+        
+        setTimeout(() => {
+          navigate(`/configurar-clinica?token=${token}`);
+        }, 1500);
+      } else {
+        // Email confirmation habilitada - usuário precisa confirmar email
+        toast.success("Conta criada com sucesso!");
+        toast.info("Verifique seu email para ativar sua conta!", {
+          description: "Enviamos um link de confirmação para " + formData.email,
+          duration: 8000,
+        });
+        
+        // Salvar token temporariamente para usar após confirmação
+        localStorage.setItem('pending_clinic_token', token);
+        
+        setTimeout(() => {
+          navigate('/auth');
+        }, 3000);
+      }
 
     } catch (error: any) {
       console.error('Erro no cadastro:', error);

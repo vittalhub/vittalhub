@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { demoMetricas, demoUsuario, demoClinica, demoConsultas } from "@/data/demoData";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { TodaySchedule } from "@/components/dashboard/TodaySchedule";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Calendar, TrendingUp, Activity } from "lucide-react";
+import { Users, Calendar, TrendingUp, Activity, Info } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 // Dados mockados para o gráfico de crescimento
@@ -21,33 +23,57 @@ const appointmentGrowthData = [
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { isDemo } = useDemoMode();
   const [userName, setUserName] = useState("Usuário");
   const [clinicName, setClinicName] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuthAndFetchData = async () => {
-      const sessionStr = localStorage.getItem("user_session");
-      if (!sessionStr) {
+      // Se estiver em modo demo, pular autenticação
+      if (isDemo) {
+        setUserName(demoUsuario.nome);
+        setClinicName(demoClinica.nome);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
         navigate("/auth");
         return;
       }
 
       try {
-        const session = JSON.parse(sessionStr);
-        setUserName(session.name || "Usuário");
+        setLoading(true);
+        // Fetch User Profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name, clinica_id')
+          .eq('id', session.user.id)
+          .single();
 
-        if (session.clinica_id) {
-          const { data: clinica, error } = await supabase
-            .from('clinicas')
-            .select('nome_clinica')
-            .eq('id', session.clinica_id)
-            .single();
-          
-          if (!error && clinica) {
-            setClinicName(clinica.nome_clinica);
-          }
+        if (profileError) {
+            console.error("Error fetching profile:", profileError);
         }
+
+        if (profile) {
+            setUserName(profile.full_name || "Usuário");
+            
+            if (profile.clinica_id) {
+                const { data: clinica, error: clinicaError } = await supabase
+                  .from('clinicas')
+                  .select('nome_clinica')
+                  .eq('id', profile.clinica_id)
+                  .single();
+                
+                if (!clinicaError && clinica) {
+                  setClinicName(clinica.nome_clinica);
+                }
+            }
+        }
+
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
       } finally {
@@ -56,13 +82,33 @@ const Dashboard = () => {
     };
 
     checkAuthAndFetchData();
-  }, [navigate]);
+  }, [navigate, isDemo]);
+
+  // Usar métricas demo se estiver em modo demo
+  const metricas = isDemo ? demoMetricas : {
+    totalPacientes: 0,
+    consultasHoje: 0,
+    taxaConversao: 0,
+  };
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-emerald-50/30 dashboard-theme">
       <Sidebar />
       <main className="flex-1 overflow-auto">
         <div className="p-8">
+          {/* Demo Mode Banner */}
+          {isDemo && (
+            <div className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-4 shadow-lg">
+              <div className="flex items-center gap-3">
+                <Info className="h-5 w-5" />
+                <div>
+                  <p className="font-semibold">Modo Demonstração</p>
+                  <p className="text-sm text-white/90">Você está navegando com dados fictícios. Explore todas as funcionalidades!</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
@@ -82,23 +128,24 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <MetricCard
               title="Total de Pacientes"
-              value="0" // Placeholder data - Table doesnt exist yet
-              change="Em breve"
-              changeType="neutral"
+              value={metricas.totalPacientes.toString()}
+              change={isDemo ? "+23 este mês" : "Em breve"}
+              changeType={isDemo ? "positive" : "neutral"}
               icon={Users}
               iconColor="text-emerald-600"
             />
             <MetricCard
               title="Consultas Hoje"
-              value="0" // Placeholder data - Table doesnt exist yet
+              value={metricas.consultasHoje.toString()}
+              change={isDemo ? "4 confirmadas" : undefined}
               icon={Calendar}
               iconColor="text-blue-600"
             />
             <MetricCard
               title="Taxa de Conversão"
-              value="0%"
-              change="Em breve"
-              changeType="neutral"
+              value={`${metricas.taxaConversao}%`}
+              change={isDemo ? "+12% vs mês anterior" : "Em breve"}
+              changeType={isDemo ? "positive" : "neutral"}
               icon={TrendingUp}
               iconColor="text-purple-600"
             />

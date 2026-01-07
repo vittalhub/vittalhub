@@ -31,6 +31,25 @@ const Auth = () => {
     };
     
     checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session && session.user.email_confirmed_at) {
+        // Verificar se há um token de clínica pendente (após confirmação de email)
+        const pendingToken = localStorage.getItem('pending_clinic_token');
+        
+        if (pendingToken) {
+          // Usuário confirmou email e tem clínica pendente de configuração
+          localStorage.removeItem('pending_clinic_token');
+          navigate(`/configurar-clinica?token=${pendingToken}`);
+        } else {
+          // Login normal - ir para dashboard
+          navigate("/dashboard");
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const validateForm = () => {
@@ -54,73 +73,33 @@ const Auth = () => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return; // Keep Zod validation
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
-      // Buscar usuário na tabela profiles
-      const { data: user, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          clinica:clinicas(*)
-        `)
-        .eq('email', email)
-        // @ts-expect-error - coluna senha existe
-        .eq('senha', password)
-        .single();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      if (error || !user) {
-        toast({
-          title: "Erro ao fazer login",
-          description: "Email ou senha incorretos",
-          variant: "destructive",
-        });
-        return;
+      if (error) {
+        if (error.message.includes("Invalid login credentials")) {
+          throw new Error("Email ou senha incorretos");
+        }
+        throw error;
       }
 
-      // Verificar se o usuário está ativo
-      if (user.status !== 'active') {
-        toast({
-          title: "Conta inativa",
-          description: "Entre em contato com o suporte",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Verificar se tem clínica associada
-      if (!user.clinica_id) {
-        toast({
-          title: "Clínica não encontrada",
-          description: "Usuário sem clínica associada. Entre em contato com o suporte.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Criar sessão manual no localStorage
-      localStorage.setItem('user_session', JSON.stringify({
-        id: user.id,
-        email: user.email,
-        name: user.full_name,
-        clinica_id: user.clinica_id,
-        role: user.role
-      }));
-
-      // Login bem-sucedido!
+      // Login success handled by onAuthStateChange listener
       toast({
         title: "Bem-vindo de volta!",
-        description: `Olá, ${user.full_name}!`,
+        description: "Login realizado com sucesso!",
       });
       
-      navigate("/dashboard");
-      
-    } catch (error) {
-      console.error('Erro inesperado:', error);
+    } catch (error: any) {
+      console.error('Erro no login:', error);
       toast({
-        title: "Erro inesperado",
-        description: "Tente novamente mais tarde",
+        title: "Erro ao fazer login",
+        description: error.message || "Tente novamente mais tarde",
         variant: "destructive",
       });
     } finally {

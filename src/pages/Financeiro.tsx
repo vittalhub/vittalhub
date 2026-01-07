@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MetricCard } from "@/components/dashboard/MetricCard";
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Search, Filter, Edit, Trash2 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, Search, Filter, Edit, Trash2, Info } from "lucide-react";
+import { format } from "date-fns";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { demoTransacoes, demoMetricas, demoProfissionais } from "@/data/demoData";
 import {
   BarChart,
   Bar,
@@ -98,12 +101,19 @@ const mockTransactions = [
 ];
 
 const Financeiro = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isDemo } = useDemoMode();
+  const [isAuthenticated, setIsAuthenticated] = useState(isDemo);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("Todos");
   const [statusFilter, setStatusFilter] = useState("Todos");
+
+  useEffect(() => {
+    if (isDemo) {
+      setIsAuthenticated(true);
+    }
+  }, [isDemo]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +125,41 @@ const Financeiro = () => {
     }
   };
 
-  const filteredTransactions = mockTransactions.filter((transaction) => {
+  const getTransactions = () => {
+    if (isDemo) {
+      return demoTransacoes.map(t => ({
+        id: t.id,
+        description: t.descricao,
+        type: t.tipo.toUpperCase(),
+        category: t.categoria,
+        professional: t.tipo === "receita" ? (demoProfissionais[Math.floor(Math.random() * demoProfissionais.length)].nome) : "-",
+        date: format(new Date(t.data), "dd/MM/yyyy"),
+        paymentMethod: t.forma_pagamento,
+        value: t.valor,
+        status: t.status === "pago" ? "Pago" : "Pendente"
+      }));
+    }
+    return mockTransactions;
+  };
+
+  const currentCashFlowData = isDemo ? [
+    { month: "Ago", receita: 32000, despesas: 8500 },
+    { month: "Set", receita: 38500, despesas: 9200 },
+    { month: "Out", receita: 36800, despesas: 8800 },
+    { month: "Nov", receita: 42000, despesas: 9500 },
+    { month: "Dez", receita: 46500, despesas: 10200 },
+    { month: "Jan", receita: 44500, despesas: 8920 }
+  ] : cashFlowData;
+
+  const currentRevenueByCategory = isDemo ? [
+    { name: "Consultas", value: 28925, color: "#10b981" },
+    { name: "Exames", value: 8900, color: "#3b82f6" },
+    { name: "Procedimentos", value: 6675, color: "#8b5cf6" }
+  ] : revenueByCategory;
+
+  const currentTransactions = getTransactions();
+
+  const filteredTransactions = currentTransactions.filter((transaction) => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          transaction.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          transaction.professional.toLowerCase().includes(searchQuery.toLowerCase());
@@ -165,6 +209,13 @@ const Financeiro = () => {
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-emerald-50/30 dashboard-theme">
       <Sidebar />
       <main className="flex-1 overflow-auto">
+        {/* Demo Mode Banner */}
+        {isDemo && (
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 flex items-center gap-3">
+            <Info className="h-4 w-4" />
+            <p className="text-sm font-medium">Modo Demonstração: Gestão financeira com dados fictícios.</p>
+          </div>
+        )}
         <div className="p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
@@ -182,7 +233,7 @@ const Financeiro = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <MetricCard
               title="Receita Total"
-              value="R$ 45.280"
+              value={isDemo ? `R$ ${demoMetricas.receitaMes.toLocaleString('pt-BR')}` : "R$ 45.280"}
               change="+15% vs mês anterior"
               changeType="positive"
               icon={DollarSign}
@@ -190,7 +241,7 @@ const Financeiro = () => {
             />
             <MetricCard
               title="Despesas Operacionais"
-              value="R$ 12.450"
+              value={isDemo ? `R$ ${demoMetricas.despesaMes.toLocaleString('pt-BR')}` : "R$ 12.450"}
               change="-8% vs mês anterior"
               changeType="positive"
               icon={TrendingDown}
@@ -204,7 +255,7 @@ const Financeiro = () => {
             />
             <MetricCard
               title="Lucro Líquido"
-              value="R$ 32.830"
+              value={isDemo ? `R$ ${demoMetricas.saldoMes.toLocaleString('pt-BR')}` : "R$ 32.830"}
               change="+22% vs mês anterior"
               changeType="positive"
               icon={TrendingUp}
@@ -223,7 +274,7 @@ const Financeiro = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={cashFlowData}>
+                  <BarChart data={currentCashFlowData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="month" stroke="#666" />
                     <YAxis stroke="#666" />
@@ -247,7 +298,7 @@ const Financeiro = () => {
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={revenueByCategory}
+                      data={currentRevenueByCategory}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
@@ -256,8 +307,8 @@ const Financeiro = () => {
                       dataKey="value"
                       label={(entry) => `${entry.name}: R$ ${entry.value.toLocaleString()}`}
                     >
-                      {revenueByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {currentRevenueByCategory.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={(entry as any).color} />
                       ))}
                     </Pie>
                     <Tooltip />

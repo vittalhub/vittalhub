@@ -2,7 +2,7 @@ import { Column, Patient } from "@/types/patient";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { PatientCard } from "./PatientCard";
 import { useDroppable } from "@dnd-kit/core";
-import { MoreHorizontal, Plus } from "lucide-react";
+import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -10,9 +10,10 @@ interface KanbanColumnProps {
   column: Column;
   onPatientClick: (patient: Patient) => void;
   onChatClick?: (patient: Patient) => void;
+  onDelete?: () => void;
 }
 
-export function KanbanColumn({ column, onPatientClick, onChatClick }: KanbanColumnProps) {
+export function KanbanColumn({ column, onPatientClick, onChatClick, onDelete }: KanbanColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -44,9 +45,16 @@ export function KanbanColumn({ column, onPatientClick, onChatClick }: KanbanColu
             <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-600">
                 <Plus className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-gray-600">
-                <MoreHorizontal className="h-4 w-4" />
-            </Button>
+            {onDelete && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-gray-400 hover:text-red-600"
+                onClick={onDelete}
+              >
+                  <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
         </div>
       </div>
 

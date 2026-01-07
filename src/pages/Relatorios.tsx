@@ -114,8 +114,28 @@ const MetricCard = ({ title, value, change, changeType, icon: Icon }: MetricCard
   );
 };
 
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { demoRelatoriosData, demoMetricas } from "@/data/demoData";
+
 const Relatorios = () => {
+  const { isDemo } = useDemoMode();
   const [period, setPeriod] = useState("6months");
+
+  // Usar dados da demo se estiver no modo demo, caso contrário usar os dados mockados (zerados)
+  const currentAppointmentsData = isDemo ? demoRelatoriosData.appointments : appointmentsData;
+  const currentRevenueData = isDemo ? demoRelatoriosData.revenue : revenueData;
+  const currentServicesData = isDemo ? demoRelatoriosData.services : servicesData;
+  const currentConversionData = isDemo ? demoRelatoriosData.conversion : conversionData;
+  const currentProfessionalPerformance = isDemo ? demoRelatoriosData.professionalPerformance : professionalPerformance;
+  const currentPeakHours = isDemo ? demoRelatoriosData.peakHours : peakHours;
+
+  const getMetricValue = (key: keyof typeof demoMetricas, format: "currency" | "percent" | "number" = "number") => {
+    if (!isDemo) return format === "currency" ? "R$ 0,00" : format === "percent" ? "0%" : "0";
+    const val = demoMetricas[key];
+    if (format === "currency") return `R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+    if (format === "percent") return `${val}%`;
+    return val.toString();
+  };
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-50 to-emerald-50/30 dashboard-theme">
@@ -155,29 +175,29 @@ const Relatorios = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <MetricCard
               title="Total de Agendamentos"
-              value="0"
-              change="Sem dados"
-              changeType="positive" // Manter neutro se possível, mas o componente pode exigir um tipo
+              value={getMetricValue("consultasMes")}
+              change={isDemo ? "+12%" : "Sem dados"}
+              changeType="positive"
               icon={Calendar}
             />
             <MetricCard
               title="Taxa de Comparecimento"
-              value="0%"
-              change="Sem dados"
+              value={getMetricValue("taxaComparecimento", "percent")}
+              change={isDemo ? "+2.4%" : "Sem dados"}
               changeType="positive"
               icon={Activity}
             />
             <MetricCard
               title="Receita Total"
-              value="R$ 0,00"
-              change="Sem dados"
+              value={getMetricValue("receitaMes", "currency")}
+              change={isDemo ? "+18.5%" : "Sem dados"}
               changeType="positive"
               icon={DollarSign}
             />
             <MetricCard
               title="Novos Pacientes"
-              value="0"
-              change="Sem dados"
+              value={getMetricValue("pacientesNovos")}
+              change={isDemo ? "+8%" : "Sem dados"}
               changeType="positive"
               icon={Users}
             />
@@ -195,7 +215,7 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={appointmentsData}>
+                  <AreaChart data={currentAppointmentsData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="month" stroke="#666" />
                     <YAxis stroke="#666" />
@@ -219,7 +239,7 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueData}>
+                  <BarChart data={currentRevenueData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="month" stroke="#666" />
                     <YAxis stroke="#666" />
@@ -244,7 +264,7 @@ const Relatorios = () => {
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
-                      data={servicesData}
+                      data={currentServicesData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
@@ -253,8 +273,8 @@ const Relatorios = () => {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {servicesData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {currentServicesData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={(entry as any).color} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -270,7 +290,7 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={conversionData} layout="vertical">
+                  <BarChart data={currentConversionData} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis type="number" stroke="#666" />
                     <YAxis dataKey="origem" type="category" stroke="#666" width={100} />
@@ -291,14 +311,24 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {professionalPerformance.length === 0 ? (
+                  {currentProfessionalPerformance.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       Nenhum profissional com dados registrados neste período.
                     </div>
                   ) : (
-                    professionalPerformance.map((prof) => (
-                      <div key={prof.name} className="p-4 rounded-lg bg-gray-50 border border-gray-100">
-                        {/* ... existing card content ... */}
+                    currentProfessionalPerformance.map((prof: any) => (
+                      <div key={prof.name} className="p-4 rounded-lg bg-white border border-gray-100 shadow-sm flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900">{prof.name}</p>
+                          <p className="text-sm text-gray-600">{prof.atendimentos} atendimentos</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-emerald-600">R$ {prof.receita.toLocaleString('pt-BR')}</p>
+                          <div className="flex items-center gap-1 text-yellow-500">
+                            <Activity className="h-3 w-3" />
+                            <span className="text-xs font-medium">{prof.satisfacao} satisfação</span>
+                          </div>
+                        </div>
                       </div>
                     ))
                   )}
@@ -313,7 +343,7 @@ const Relatorios = () => {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={peakHours}>
+                  <LineChart data={currentPeakHours}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="hora" stroke="#666" />
                     <YAxis stroke="#666" />

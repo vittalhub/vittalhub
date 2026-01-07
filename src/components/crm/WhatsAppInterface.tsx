@@ -3,6 +3,8 @@ import { X, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
+import { WhatsAppConnect } from "./WhatsAppConnect";
+import { WhatsAppChat } from "@/types/whatsapp";
 
 interface WhatsAppInterfaceProps {
   isOpen: boolean;
@@ -11,12 +13,17 @@ interface WhatsAppInterfaceProps {
 }
 
 export function WhatsAppInterface({ isOpen, onClose, initialPatient }: WhatsAppInterfaceProps) {
-  const [selectedPatient, setSelectedPatient] = useState<string | undefined>(initialPatient);
+  const [selectedChat, setSelectedChat] = useState<WhatsAppChat | undefined>(undefined);
   
   // Sync prop with internal state when it changes (e.g. opening from Kanban)
   useEffect(() => {
     if (initialPatient) {
-        setSelectedPatient(initialPatient);
+        // Temporary stub until we have a way to resolve name -> chat ID
+        // This allows opening the window but sending might be disabled if ID is missing
+        setSelectedChat({
+            id: "", 
+            name: initialPatient
+        });
     }
   }, [initialPatient]);
 
@@ -37,8 +44,8 @@ export function WhatsAppInterface({ isOpen, onClose, initialPatient }: WhatsAppI
         {/* Left Sidebar: Conversations */}
         <div className="w-full md:w-[320px] lg:w-[380px] h-full border-r border-border bg-white z-10">
           <ConversationList 
-            onSelectPatient={setSelectedPatient} 
-            selectedPatientId={selectedPatient}
+            onSelectChat={setSelectedChat} 
+            selectedChatId={selectedChat?.id}
           />
         </div>
 
@@ -52,42 +59,30 @@ export function WhatsAppInterface({ isOpen, onClose, initialPatient }: WhatsAppI
                 }}
             />
 
-            {selectedPatient ? (
+            {selectedChat ? (
                 // We need to slightly adjust ChatWindow to fit this container perfectly 
                 // and potentially hide its internal close button since we have the modal structure
                 <div className="h-full w-full flex flex-col">
                    <ChatWindow 
-                      onClose={() => setSelectedPatient(undefined)} // Back to empty state on close
-                      patientName={selectedPatient} 
+                      onClose={() => setSelectedChat(undefined)} // Back to empty state on close
+                      chat={selectedChat} 
                    /> 
-                   {/* 
-                       Note: The current ChatWindow has a fixed width of 400px on md screens. 
-                       We might need to override that class via specific styles or prop if it persists.
-                       Ideally, ChatWindow should just be `w-full`.
-                   */}
                 </div>
             ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center text-center p-8 z-20 relative">
-                    <div className="bg-white/80 p-6 rounded-full mb-6 shadow-sm ring-1 ring-black/5">
-                        <MessageSquare className="h-12 w-12 text-muted-foreground/60" />
-                    </div>
-                    <h2 className="text-2xl font-light text-gray-700 mb-2">ClinicFlow Chat</h2>
-                    <p className="text-muted-foreground max-w-sm">
-                        Selecione uma conversa ao lado para começar a atender seus pacientes de forma rápida e integrada.
-                    </p>
-                    <div className="mt-8 flex items-center gap-2 text-xs text-muted-foreground">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        Sistema Conectado via Evolution API
-                    </div>
-                    
-                     <Button 
+                <div className="h-full w-full flex flex-col items-center justify-center bg-gray-50/50 relative">
+                    <Button 
                         variant="ghost" 
                         size="icon" 
                         onClick={onClose}
-                        className="absolute top-4 right-4 hidden md:flex"
+                        className="absolute top-4 right-4 hidden md:flex z-50"
                     >
                         <X className="h-6 w-6 text-gray-500" />
                     </Button>
+                    
+                    {/* Connection Screen */}
+                    <div className="w-full max-w-lg">
+                        <WhatsAppConnect />
+                    </div>
                 </div>
             )}
         </div>

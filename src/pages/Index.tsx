@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useDemoMode } from "@/hooks/useDemoMode";
 import heroDashboard from "@/assets/hero-dashboard.png";
 
 const Header = () => {
@@ -29,6 +30,7 @@ const Header = () => {
 
 const HeroSection = () => {
   const navigate = useNavigate();
+  const { enableDemoMode } = useDemoMode();
   
   return (
     <section className="relative min-h-screen bg-gradient-hero pt-16 overflow-hidden">
@@ -50,7 +52,7 @@ const HeroSection = () => {
               Começar Agora
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
-            <Button variant="outline" size="xl" className="bg-white hover:bg-slate-50 border-slate-200">
+            <Button variant="outline" size="xl" className="bg-white hover:bg-slate-50 border-slate-200" onClick={() => navigate("/demo")}>
               Ver Demonstração
             </Button>
           </div>

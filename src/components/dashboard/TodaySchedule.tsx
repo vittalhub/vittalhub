@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { demoConsultas } from "@/data/demoData";
 
 interface Appointment {
   id: string;
@@ -65,6 +67,24 @@ const getStatusBadge = (status: Appointment["status"]) => {
 
 export function TodaySchedule() {
   const [date, setDate] = useState<Date>(new Date());
+  const { isDemo } = useDemoMode();
+
+  // Converter consultas demo para formato do componente
+  const getDemoAppointments = (): Appointment[] => {
+    const selectedDateStr = format(date, "yyyy-MM-dd");
+    return demoConsultas
+      .filter(consulta => consulta.data === selectedDateStr)
+      .map(consulta => ({
+        id: consulta.id,
+        time: consulta.hora_inicio,
+        patientName: consulta.paciente_nome,
+        service: consulta.tipo,
+        professional: consulta.profissional,
+        status: consulta.status === "confirmada" ? "confirmed" : consulta.status === "pendente" ? "pending" : "confirmed"
+      }));
+  };
+
+  const appointments = isDemo ? getDemoAppointments() : mockAppointments;
 
   return (
     <Card className="border-gray-100 shadow-sm">
@@ -94,7 +114,7 @@ export function TodaySchedule() {
 
       <CardContent>
         <div className="space-y-3">
-          {mockAppointments.map((appointment) => (
+          {appointments.map((appointment) => (
             <div
               key={appointment.id}
               className="flex items-center gap-4 p-4 rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all"
@@ -115,10 +135,10 @@ export function TodaySchedule() {
             </div>
           ))}
 
-          {mockAppointments.length === 0 && (
+          {appointments.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-20" />
-              <p>Nenhuma consulta agendada para hoje</p>
+              <p>Nenhuma consulta agendada para {format(date, "dd/MM/yyyy", { locale: ptBR })}</p>
             </div>
           )}
         </div>

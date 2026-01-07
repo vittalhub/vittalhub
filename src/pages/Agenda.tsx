@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Clock, User, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, User, Plus, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useDemoMode } from "@/hooks/useDemoMode";
+import { demoConsultas, demoProfissionais, demoEspecialidades } from "@/data/demoData";
 
 interface Appointment {
   id: string;
@@ -101,18 +103,48 @@ const getStatusBadge = (status: Appointment["status"]) => {
 };
 
 const Agenda = () => {
+  const { isDemo } = useDemoMode();
   const [date, setDate] = useState<Date>(new Date());
   const [view, setView] = useState<"day" | "week" | "month" | "list">("day");
   const [selectedProfessional, setSelectedProfessional] = useState<string>("all");
 
+  const getAppointments = () => {
+    if (isDemo) {
+      const selectedDateStr = format(date, "yyyy-MM-dd");
+      return demoConsultas
+        .filter(c => c.data === selectedDateStr)
+        .map(c => ({
+          id: c.id,
+          time: c.hora_inicio,
+          patient: c.paciente_nome,
+          professional: c.profissional,
+          service: c.tipo,
+          status: c.status === "confirmada" ? "confirmed" : c.status === "pendente" ? "waiting" : "confirmed",
+          color: c.especialidade === "Cardiologia" ? "emerald" : 
+                 c.especialidade === "Clínica Geral" ? "blue" :
+                 c.especialidade === "Dermatologia" ? "purple" : "orange"
+        }));
+    }
+    return mockAppointments;
+  };
+
+  const currentAppointments = getAppointments();
+
   const filteredAppointments = selectedProfessional === "all"
-    ? mockAppointments
-    : mockAppointments.filter(apt => apt.professional === selectedProfessional);
+    ? currentAppointments
+    : currentAppointments.filter(apt => apt.professional === selectedProfessional);
 
   return (
     <div className="min-h-screen flex bg-gray-50 dashboard-theme">
       <Sidebar />
       <main className="flex-1 overflow-auto">
+        {/* Demo Mode Banner */}
+        {isDemo && (
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 flex items-center gap-3">
+            <Info className="h-4 w-4" />
+            <p className="text-sm font-medium">Modo Demonstração: Visualize e gerencie a agenda com dados fictícios.</p>
+          </div>
+        )}
         <div className="p-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -165,8 +197,16 @@ const Agenda = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos Profissionais</SelectItem>
-                <SelectItem value="Dr. Rafael">Dr. Rafael</SelectItem>
-                <SelectItem value="Dra. Carolina">Dra. Carolina</SelectItem>
+                {isDemo ? (
+                  demoProfissionais.map(p => (
+                    <SelectItem key={p.id} value={p.nome}>{p.nome}</SelectItem>
+                  ))
+                ) : (
+                  <>
+                    <SelectItem value="Dr. Rafael">Dr. Rafael</SelectItem>
+                    <SelectItem value="Dra. Carolina">Dra. Carolina</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>

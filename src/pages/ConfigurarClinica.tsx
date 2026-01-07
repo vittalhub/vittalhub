@@ -44,13 +44,34 @@ const ConfigurarClinica = () => {
   
   // Validar token ao carregar a página
   useEffect(() => {
-    const token = searchParams.get('token');
-    if (!token) {
-      toast.error("Acesso negado. Token inválido.");
-      navigate('/cadastro');
-      return;
-    }
-    setClinicaId(token);
+    const checkAuthAndToken = async () => {
+      const token = searchParams.get('token');
+      if (!token) {
+        toast.error("Acesso negado. Token inválido.");
+        navigate('/cadastro');
+        return;
+      }
+
+      // Verificar se o usuário está autenticado e com email confirmado
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast.error("Você precisa confirmar seu email antes de configurar a clínica.");
+        navigate('/auth');
+        return;
+      }
+
+      // Verificar se o email foi confirmado
+      if (!session.user.email_confirmed_at) {
+        toast.error("Por favor, confirme seu email antes de continuar.");
+        navigate('/auth');
+        return;
+      }
+
+      setClinicaId(token);
+    };
+
+    checkAuthAndToken();
   }, [searchParams, navigate]);
   
   const [formData, setFormData] = useState({

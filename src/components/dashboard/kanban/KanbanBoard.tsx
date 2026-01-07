@@ -17,12 +17,20 @@ import { KanbanColumn } from './KanbanColumn';
 import { PatientCard } from './PatientCard';
 import { PatientModal } from './PatientModal';
 
+import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
 interface KanbanBoardProps {
   onChatClick?: (patient: Patient) => void;
+  columns: Column[];
+  setColumns: React.Dispatch<React.SetStateAction<Column[]>>;
+  onDragEnd?: (patientId: string, newStageId: string) => void;
+  onAddColumn?: () => void;
+  onDeleteColumn?: (columnId: string) => void;
+  onPatientUpdate?: (patient: Patient) => void;
 }
 
-export function KanbanBoard({ onChatClick }: KanbanBoardProps) {
-  const [columns, setColumns] = useState<Column[]>(initialColumns);
+export function KanbanBoard({ onChatClick, columns, setColumns, onDragEnd, onAddColumn, onDeleteColumn, onPatientUpdate }: KanbanBoardProps) {
   const [activePatient, setActivePatient] = useState<Patient | null>(null);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,6 +43,7 @@ export function KanbanBoard({ onChatClick }: KanbanBoardProps) {
     })
   );
 
+  // Helper functions
   const findColumnByPatientId = (patientId: string): Column | undefined => {
     return columns.find((col) =>
       col.patients.some((p) => p.id === patientId)
@@ -135,6 +144,15 @@ export function KanbanBoard({ onChatClick }: KanbanBoardProps) {
           return newColumns;
         });
       }
+    } else {
+        // Moved to a different column
+        // Check if handleDragOver already handled the state update (it should have)
+        // If so, we just need to notify parent
+        
+        // Notify parent about the change
+        if (onDragEnd) {
+             onDragEnd(activeId, overColumn.id);
+        }
     }
   };
 
@@ -152,6 +170,9 @@ export function KanbanBoard({ onChatClick }: KanbanBoardProps) {
         ),
       }))
     );
+    if (onPatientUpdate) {
+        onPatientUpdate(patient);
+    }
     setIsModalOpen(false);
   };
 
@@ -172,8 +193,18 @@ export function KanbanBoard({ onChatClick }: KanbanBoardProps) {
                 column={column}
                 onPatientClick={handlePatientClick}
                 onChatClick={onChatClick}
+                onDelete={onDeleteColumn ? () => onDeleteColumn(column.id) : undefined}
               />
             ))}
+            
+            {/* Add Column Button */}
+            <div className="min-w-[350px] h-full flex items-start justify-center pt-4 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
+                 <Button variant="ghost" className="text-gray-500 hover:text-emerald-600 gap-2" onClick={onAddColumn}>
+                    <Plus className="h-5 w-5" />
+                    Nova Fase
+                 </Button>
+            </div>
+
             {/* Spacer for right/end of list */}
             <div className="min-w-[1px]" />
           </div>
