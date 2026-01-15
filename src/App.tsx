@@ -16,6 +16,7 @@ import Relatorios from "./pages/Relatorios";
 import Especialidades from "./pages/Especialidades";
 import CadastroClinica from "./pages/CadastroClinica";
 import ConfigurarClinica from "./pages/ConfigurarClinica";
+import Feedback from "./pages/Feedback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/especialidades" element={<Especialidades />} />
           <Route path="/cadastro" element={<CadastroClinica />} />
           <Route path="/configurar-clinica" element={<ConfigurarClinica />} />
+          <Route path="/feedback" element={<Feedback />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
